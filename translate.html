@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budilnik Proqramı</title>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f7f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .alarm-clock {
+      background-color: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+      position: relative;
+      height: auto;
+      min-height: 350px;
+    }
+    h1 {
+      color: #00796b;
+      margin-bottom: 20px;
+      font-size: 24px;
+      display: inline-block;
+    }
+    .settings {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      font-size: 16px;
+      color: #00796b;
+      cursor: pointer;
+    }
+    .settings img {
+      width: 30px;
+      height: 30px;
+    }
+    .settings:hover {
+      opacity: 0.8;
+    }
+    .settings select {
+      padding: 8px;
+      margin-top: 10px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+    input[type="time"] {
+      font-size: 18px;
+      padding: 10px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      border-radius: 5px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #004d40;
+    }
+    .message {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #00796b;
+    }
+    .active {
+      color: green;
+      font-weight: bold;
+    }
+    .inactive {
+      color: red;
+      font-weight: bold;
+    }
+    .remaining-time {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #ff5722;
+    }
+
+    @media screen and (max-width: 600px) {
+      h1 {
+        font-size: 20px;
+      }
+      .alarm-clock {
+        padding: 20px;
+      }
+      input[type="time"], button {
+        font-size: 16px;
+      }
+      .settings select {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="alarm-clock">
+    <h1>⏰ Budilnik</h1>
+
+    <!-- Ayarlar Icon -->
+    <div class="settings" onclick="toggleSettings()">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/6/6e/Settings_icon_%28Font_Awesome%29.svg" alt="Ayarlar">
+    </div>
+
+    <!-- Ayarlar Bölməsi -->
+    <div id="settingsMenu" style="display: none;">
+      <label for="alarmSound">Alarm Səsi:</label>
+      <select id="alarmSound">
+        <option value="beep">Beep (Sadə Beep)</option>
+        <option value="chime">Chime (Zəng Səsi)</option>
+        <option value="ring">Rəngli Zəng</option>
+      </select>
+    </div>
+
+    <input type="time" id="alarmTime" required>
+    <button onclick="setAlarm()">Alarm qur</button>
+    <div class="message" id="message"></div>
+    <div class="remaining-time" id="remainingTime"></div>
+
+    <!-- Alarm vəziyyəti -->
+    <div id="alarmStatus" class="inactive">Alarm deaktivdir</div>
+    <button id="toggleAlarm" style="display:none;" onclick="toggleAlarm()">Aktivləşdir / Söndür</button>
+
+    <!-- Yadda saxlanılan alarm saatı -->
+    <div id="savedAlarm" style="display:none;">
+      <p>Yadda saxlanmış alarm: <span id="savedAlarmTime"></span></p>
+      <p id="savedAlarmStatus" class="inactive">Aktiv deyil</p>
+    </div>
+  </div>
+
+  <script>
+    let alarmTime;
+    let alarmTimeout;
+    let alarmSound = new Audio('https://www.soundjay.com/button/beep-07.wav'); // Default səs
+    let alarmSet = false;
+    let alarmActive = false;
+
+    // Alarm səsini dəyişdir
+    function changeAlarmSound() {
+      const selectedSound = document.getElementById("alarmSound").value;
+
+      if (selectedSound === "beep") {
+        alarmSound = new Audio('https://www.soundjay.com/button/beep-07.wav');
+      } else if (selectedSound === "chime") {
+        alarmSound = new Audio('https://www.soundjay.com/button/chime-01.wav');
+      } else if (selectedSound === "ring") {
+        alarmSound = new Audio('https://www.soundjay.com/button/ring-01.wav');
+      }
+    }
+
+    // Alarmı qur
+    function setAlarm() {
+      const inputTime = document.getElementById("alarmTime").value;
+
+      if (!inputTime) {
+        alert("Zəhmət olmasa, alarm saatını daxil edin!");
+        return;
+      }
+
+      alarmTime = inputTime;
+      const [hours, minutes] = alarmTime.split(":").map(num => parseInt(num, 10));
+
+      // Alarm vaxtını təyin edirik
+      const now = new Date();
+      const alarmDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+
+      if (alarmDate < now) {
+        alarmDate.setDate(alarmDate.getDate() + 1); // Əgər alarm vaxtı keçibsə, növbəti günə təyin edirik
+      }
+
+      const timeDifference = alarmDate - now;
+
+      // Mesajı göstəririk
+      document.getElementById("message").textContent = `Alarm ${alarmTime}-də qurulub.`;
+      document.getElementById("remainingTime").textContent = `Qalan vaxt: ${formatTime(timeDifference)}`;
+
+      // Alarm vaxtına çatdıqda funksiyanı işə salırıq
+      alarmTimeout = setTimeout(triggerAlarm, timeDifference);
+
+      // Alarmı yadda saxlamaq
+      if (confirm("Alarmı yadda saxlamaq istəyirsiniz?")) {
+        alarmSet = true;
+        document.getElementById("savedAlarmTime").textContent = alarmTime;
+        document.getElementById("savedAlarm").style.display = 'block';
+        document.getElementById("toggleAlarm").style.display = 'block';
+      }
+    }
+
+    // Alarm zamanı çağrılacaq funksiya
+    function triggerAlarm() {
+      document.getElementById("message").textContent = "⏰ Alarm! Yuxudan oyan!";
+      
+      // Səsli bildiriş çalır
+      alarmSound.play();
+
+      // Veb bildirişi (browser dəstəkləyirsə)
+      if (Notification.permission === "granted") {
+        new Notification("⏰ Alarm! Yuxudan oyan!");
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            new Notification("⏰ Alarm! Yuxudan oyan!");
+          }
+        });
+      }
+
+      alarmActive = true;
+      updateAlarmStatus();
+    }
+
+    // Alarmı aktivləşdir / söndür
+    function toggleAlarm() {
+      if (alarmActive) {
+        clearTimeout(alarmTimeout);
+        document.getElementById("message").textContent = "Alarm söndürüldü.";
+        alarmActive = false;
+        document.getElementById("savedAlarmStatus").textContent = "Aktiv deyil";
+        document.getElementById("savedAlarmStatus").classList.remove("active");
+        document.getElementById("savedAlarmStatus").classList.add("inactive");
+      } else {
+        setAlarm();
+        alarmActive = true;
+        document.getElementById("savedAlarmStatus").textContent = "Aktivdir";
+        document.getElementById("savedAlarmStatus").classList.remove("inactive");
+        document.getElementById("savedAlarmStatus").classList.add("active");
+      }
+    }
+
+    // Alarmın statusunu yenilə
+    function updateAlarmStatus() {
+      if (alarmActive) {
+        document.getElementById("alarmStatus").textContent = "Alarm aktivdir";
+        document.getElementById("alarmStatus").classList.remove("inactive");
+        document.getElementById("alarmStatus").classList.add("active");
+      } else {
+        document.getElementById("alarmStatus").textContent = "Alarm deaktivdir";
+        document.getElementById("alarmStatus").classList.remove("active");
+        document.getElementById("alarmStatus").classList.add("inactive");
+      }
+    }
+
+    // Vaxtı formatlama funksiyası
+    function formatTime(ms) {
+      const seconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const remMinutes = minutes % 60;
+      const remSeconds = seconds % 60;
+      
+      return `${hours} saat ${remMinutes} dəqiqə ${remSeconds} saniyə`;
+    }
+
+    // Ayarlar pəncərəsini açıb bağlamaq
+    function toggleSettings() {
+      const settingsMenu = document.getElementById("settingsMenu");
+      settingsMenu.style.display = settingsMenu.style.display === "block" ? "none" : "block";
+    }
+
+    // Ayarları dəyişdirin (səs seçimi)
+    document.getElementById("alarmSound").addEventListener("change", changeAlarmSound);
+  </script>
+
+</body>
+</html>
